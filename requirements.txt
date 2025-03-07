@@ -1,0 +1,7 @@
+Flask-Caching
+Flask
+flask-cors
+gunicorn
+requests
+redis
+
