@@ -45,19 +45,27 @@ def get_months_between_dates(start_date, end_date):
     return months
 
 def get_month_range(year_month, start_date, end_date):
-    """Get the start and end dates for a month, adjusted to the requested range."""
+    """
+    Get the start and end dates for a month.
+    According to OpenExchangeRates docs, we can request the 1st to 31st of any month, 
+    regardless of actual month length.
+    """
     year, month = map(int, year_month.split('-'))
+    
+    # Always use the 1st day of the month as start
     month_start = f"{year}-{month:02d}-01"
     
-    # Get the last day of the month
-    last_day = calendar.monthrange(year, month)[1]
-    month_end = f"{year}-{month:02d}-{last_day:02d}"
+    # Always use the 31st day for end (per API documentation)
+    month_end = f"{year}-{month:02d}-31"
     
-    # Adjust for request range
-    if month_start < start_date:
+    # For the first month in the range, use the actual start date if it's after the 1st
+    start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+    if year == start_date_obj.year and month == start_date_obj.month:
         month_start = start_date
     
-    if month_end > end_date:
+    # For the last month in the range, use the actual end date if it's before the 31st
+    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+    if year == end_date_obj.year and month == end_date_obj.month:
         month_end = end_date
     
     return month_start, month_end
@@ -70,7 +78,7 @@ def exchange_rates():
         end_date = request.args.get('end_date')
         symbols = request.args.get('symbols')
         base = request.args.get('base')
-        app_id = os.environ.get('OPENEXCHANGERATES_APP_ID')
+        app_id = request.args.get('app_id') or os.environ.get('OPENEXCHANGERATES_APP_ID')
         
         # Validate inputs
         if not app_id:
@@ -153,10 +161,20 @@ def exchange_rates():
         logger.info(f"Returning combined data with {len(combined_rates)} days of rates")
         return jsonify(combined_rates)
     
+    # Add detailed error logging for troubleshooting
     except Exception as e:
         error_msg = f"Error processing request: {str(e)}"
         logger.exception(error_msg)
-        return jsonify({"error": error_msg}), 500
+        
+        # Log additional diagnostic information
+        if 'response' in locals() and hasattr(response, 'text'):
+            logger.error(f"Response from OpenExchangeRates API: {response.text}")
+        
+        # Return a more informative error message
+        return jsonify({
+            "error": error_msg,
+            "details": "Check server logs for more information"
+        }), 500
 
 @app.route('/', methods=['GET'])
 def index():
