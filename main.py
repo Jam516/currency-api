@@ -70,6 +70,22 @@ def get_month_range(year_month, start_date, end_date):
     
     return month_start, month_end
 
+def transform_rates_format(rates_data):
+    transformed_data = []
+    
+    # Iterate through each date
+    for date, currencies in rates_data.items():
+        # Iterate through each currency and its rate
+        for currency, rate in currencies.items():
+            # Create new object and add to result array
+            transformed_data.append({
+                "day": date,
+                "price": rate,
+                "symbol": currency
+            })
+    
+    return transformed_data
+
 @app.route('/api/exchange-rates', methods=['GET'])
 def exchange_rates():
     try:
@@ -124,6 +140,7 @@ def exchange_rates():
                 url += f'&base={base}'
             
             logger.info(f"Requesting data for {month_start} to {month_end}")
+            # logger.info(f"API URL: {url}")
             
             # Add delay between requests (except for the first)
             if i > 0:
@@ -149,14 +166,17 @@ def exchange_rates():
             
             logger.info(f"Added {len(month_data.get('rates', {}))} days of rates for {month}")
         
-        # Cache the result (only rates)
+        # Transform data to flat array format
+        transformed_data = transform_rates_format(combined_rates)
+        
+        # Cache the transformed result
         cache[cache_key] = {
-            'data': combined_rates,
+            'data': transformed_data,
             'timestamp': time.time()
         }
         
-        logger.info(f"Returning combined data with {len(combined_rates)} days of rates")
-        return jsonify(combined_rates)
+        logger.info(f"Returning transformed data with {len(transformed_data)} entries")
+        return jsonify(transformed_data)
     
     # Add detailed error logging for troubleshooting
     except Exception as e:
@@ -188,11 +208,11 @@ def index():
             "app_id": "Your OpenExchangeRates API key"
         },
         "example": "/api/exchange-rates?start_date=2023-01-01&end_date=2023-03-31&symbols=EUR,GBP,JPY&app_id=YOUR_API_KEY",
-        "response_format": "Returns only the rates object as a JSON with date keys (YYYY-MM-DD) mapping to currency rate objects",
+        "response_format": "Returns data as an array of objects with day, price, and symbol properties",
         "notes": [
             "The API makes one request to OpenExchangeRates for each month in the date range",
             "Results are cached for 1 hour to improve performance",
-            "The response includes only the rates data without additional metadata"
+            "The response includes a flat array of exchange rate entries"
         ]
     })
 
