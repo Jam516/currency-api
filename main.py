@@ -80,7 +80,7 @@ def transform_rates_format(rates_data):
             # Create new object and add to result array
             transformed_data.append({
                 "day": date,
-                "price": rate,
+                "price": 1/rate,
                 "symbol": currency
             })
     
