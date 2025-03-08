@@ -113,18 +113,15 @@ def exchange_rates():
         for i, month in enumerate(months):
             month_start, month_end = get_month_range(month, start_date, end_date)
             
-            # Prepare API call parameters
-            params = {
-                'app_id': app_id,
-                'start_date': month_start,
-                'end_date': month_end
-            }
+            # Prepare API call URL with correct parameter names
+            url = f'https://openexchangerates.org/api/time-series.json?app_id={app_id}&start={month_start}&end={month_end}'
             
+            # Add optional parameters if provided
             if symbols:
-                params['symbols'] = symbols
+                url += f'&symbols={symbols}'
             
             if base:
-                params['base'] = base
+                url += f'&base={base}'
             
             logger.info(f"Requesting data for {month_start} to {month_end}")
             
@@ -133,7 +130,7 @@ def exchange_rates():
                 time.sleep(1)  # 1 second delay to avoid rate limiting
             
             # Make API call
-            response = requests.get('https://openexchangerates.org/api/time-series.json', params=params)
+            response = requests.get(url)
             
             if response.status_code != 200:
                 error_msg = f"API Error ({response.status_code}): {response.text}"
